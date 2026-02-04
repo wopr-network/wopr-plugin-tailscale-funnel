@@ -45,7 +45,7 @@ async function checkTailscaleAvailable(): Promise<boolean> {
   // Check if tailscale CLI exists
   const which = exec("which tailscale");
   if (!which) {
-    ctx?.log.warn("Tailscale CLI not found. Install: curl -fsSL https://tailscale.com/install.sh | sh");
+    ctx?.log.warn("Tailscale CLI not found. Install from https://tailscale.com/download");
     available = false;
     return false;
   }
@@ -108,6 +108,10 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
     await stopFunnel(activeFunnel.port);
   }
 
+  // Build public URL
+  // Funnel always uses HTTPS on port 443
+  const publicUrl = `https://${hostname}${path === "/" ? "" : path}`;
+
   try {
     // Start funnel in background
     // tailscale funnel <port> exposes on 443 by default
@@ -115,12 +119,19 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
       detached: true,
       stdio: "ignore",
     });
+
+    // Handle spawn errors (e.g., tailscale not found)
+    funnelProcess.on("error", (err) => {
+      ctx?.log.error(`Funnel process error for port ${port}: ${err.message}`);
+      if (activeFunnel?.port === port) {
+        activeFunnel = null;
+      }
+    });
+
     funnelProcess.unref();
 
-    // Build public URL
-    // Funnel always uses HTTPS on port 443
-    const publicUrl = `https://${hostname}${path === "/" ? "" : path}`;
-
+    // Store state - note: we can't verify funnel actually started since it's detached
+    // The error handler above will clear state if spawn fails
     activeFunnel = {
       port,
       path,
@@ -132,7 +143,7 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
     ctx?.log.info(`Funnel started: ${publicUrl} -> localhost:${port}`);
     return publicUrl;
   } catch (err) {
-    ctx?.log.error(`Failed to start funnel for port ${port}: ${err}`);
+    ctx?.log.error(`Failed to spawn funnel for port ${port}: ${err}`);
     return null;
   }
 }
@@ -142,27 +153,25 @@ async function stopFunnel(port: number): Promise<boolean> {
     return false;
   }
 
-  try {
-    // Stop the funnel using 'tailscale funnel off' or by killing the process
-    // The correct syntax is: tailscale funnel <port> off
-    exec(`tailscale funnel ${port} off`);
-
-    // Also try to kill the process if we have the PID
-    if (activeFunnel.pid) {
-      try {
-        process.kill(activeFunnel.pid, "SIGTERM");
-      } catch {
-        // Process may already be dead
-      }
-    }
-
-    activeFunnel = null;
-    ctx?.log.info(`Funnel stopped for port ${port}`);
-    return true;
-  } catch (err) {
-    ctx?.log.error(`Failed to stop funnel for port ${port}: ${err}`);
-    return false;
+  // Stop the funnel using 'tailscale funnel off'
+  // Note: exec() returns null on failure, doesn't throw
+  const result = exec(`tailscale funnel ${port} off`);
+  if (result === null) {
+    ctx?.log.warn(`tailscale funnel ${port} off may have failed`);
   }
+
+  // Also try to kill the process if we have the PID
+  if (activeFunnel.pid) {
+    try {
+      process.kill(activeFunnel.pid, "SIGTERM");
+    } catch {
+      // Process may already be dead
+    }
+  }
+
+  activeFunnel = null;
+  ctx?.log.info(`Funnel stopped for port ${port}`);
+  return true;
 }
 
 // ============================================================================
