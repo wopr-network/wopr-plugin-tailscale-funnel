@@ -22,7 +22,10 @@ import type {
 let ctx: WOPRPluginContext | null = null;
 let hostname: string | null = null;
 let available: boolean | null = null;
-const activeFunnels = new Map<number, FunnelInfo & { pid?: number }>();
+
+// Tailscale Funnel only supports ONE active funnel at a time
+// Exposing a new port will replace the previous one
+let activeFunnel: (FunnelInfo & { pid?: number }) | null = null;
 
 // ============================================================================
 // Tailscale CLI Helpers
@@ -93,11 +96,16 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
     return null;
   }
 
-  // Check if already exposed
-  const existing = activeFunnels.get(port);
-  if (existing?.active) {
-    ctx?.log.debug?.(`Port ${port} already exposed at ${existing.publicUrl}`);
-    return existing.publicUrl;
+  // Check if already exposed on this port
+  if (activeFunnel?.active && activeFunnel.port === port) {
+    ctx?.log.debug?.(`Port ${port} already exposed at ${activeFunnel.publicUrl}`);
+    return activeFunnel.publicUrl;
+  }
+
+  // Tailscale only supports ONE funnel at a time - stop any existing funnel
+  if (activeFunnel?.active) {
+    ctx?.log.info(`Replacing existing funnel on port ${activeFunnel.port} with port ${port}`);
+    await stopFunnel(activeFunnel.port);
   }
 
   try {
@@ -113,14 +121,13 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
     // Funnel always uses HTTPS on port 443
     const publicUrl = `https://${hostname}${path === "/" ? "" : path}`;
 
-    const info: FunnelInfo & { pid?: number } = {
+    activeFunnel = {
       port,
       path,
       publicUrl,
       active: true,
       pid: funnelProcess.pid,
     };
-    activeFunnels.set(port, info);
 
     ctx?.log.info(`Funnel started: ${publicUrl} -> localhost:${port}`);
     return publicUrl;
@@ -131,8 +138,9 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
 }
 
 async function stopFunnel(port: number): Promise<boolean> {
-  const info = activeFunnels.get(port);
-  if (!info) return false;
+  if (!activeFunnel || activeFunnel.port !== port) {
+    return false;
+  }
 
   try {
     // Stop the funnel using 'tailscale funnel off' or by killing the process
@@ -140,16 +148,15 @@ async function stopFunnel(port: number): Promise<boolean> {
     exec(`tailscale funnel ${port} off`);
 
     // Also try to kill the process if we have the PID
-    if (info.pid) {
+    if (activeFunnel.pid) {
       try {
-        process.kill(info.pid, "SIGTERM");
+        process.kill(activeFunnel.pid, "SIGTERM");
       } catch {
         // Process may already be dead
       }
     }
 
-    info.active = false;
-    activeFunnels.delete(port);
+    activeFunnel = null;
     ctx?.log.info(`Funnel stopped for port ${port}`);
     return true;
   } catch (err) {
@@ -180,14 +187,14 @@ const funnelExtension: FunnelExtension = {
   },
 
   getUrl(port: number) {
-    return activeFunnels.get(port)?.publicUrl || null;
+    return activeFunnel?.port === port ? activeFunnel.publicUrl : null;
   },
 
   getStatus(): FunnelStatus {
     return {
       available: available ?? false,
       hostname: hostname || undefined,
-      funnels: Array.from(activeFunnels.values()),
+      funnels: activeFunnel ? [activeFunnel] : [],
     };
   },
 };
@@ -203,7 +210,7 @@ const plugin: WOPRPlugin = {
 
   configSchema: {
     title: "Tailscale Funnel",
-    description: "Expose local services to the internet via Tailscale Funnel",
+    description: "Expose a local service to the internet via Tailscale Funnel (one port at a time)",
     fields: [
       {
         name: "enabled",
@@ -214,9 +221,9 @@ const plugin: WOPRPlugin = {
       },
       {
         name: "expose",
-        type: "array",
-        label: "Auto-expose ports",
-        description: "Ports to automatically expose on startup",
+        type: "object",
+        label: "Auto-expose port",
+        description: "Port to automatically expose on startup (only one supported)",
       },
     ],
   },
@@ -307,14 +314,14 @@ const plugin: WOPRPlugin = {
       return;
     }
 
-    // Auto-expose configured ports
-    if (config?.expose && Array.isArray(config.expose)) {
-      for (const item of config.expose) {
-        if (item.port) {
-          const url = await startFunnel(item.port, item.path);
-          if (url) {
-            ctx.log.info(`Auto-exposed: ${url}`);
-          }
+    // Auto-expose configured port (only one supported by Tailscale)
+    if (config?.expose) {
+      // Support both old array format (use first item) and new object format
+      const exposeConfig = Array.isArray(config.expose) ? config.expose[0] : config.expose;
+      if (exposeConfig?.port) {
+        const url = await startFunnel(exposeConfig.port, exposeConfig.path);
+        if (url) {
+          ctx.log.info(`Auto-exposed: ${url}`);
         }
       }
     }
@@ -323,9 +330,9 @@ const plugin: WOPRPlugin = {
   },
 
   async shutdown() {
-    // Stop all funnels
-    for (const port of activeFunnels.keys()) {
-      await stopFunnel(port);
+    // Stop active funnel if any
+    if (activeFunnel) {
+      await stopFunnel(activeFunnel.port);
     }
 
     ctx?.unregisterExtension("funnel");

@@ -4,8 +4,12 @@
 
 export interface FunnelConfig {
   enabled?: boolean;
-  /** Auto-expose these ports on init */
-  expose?: FunnelExpose[];
+  /**
+   * Auto-expose this port on init.
+   * Note: Tailscale Funnel only supports ONE port at a time.
+   * Also accepts array for backwards compatibility (only first item used).
+   */
+  expose?: FunnelExpose | FunnelExpose[];
 }
 
 export interface FunnelExpose {
