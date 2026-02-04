@@ -22,7 +22,7 @@ import type {
 let ctx: WOPRPluginContext | null = null;
 let hostname: string | null = null;
 let available: boolean | null = null;
-const activeFunnels = new Map<number, FunnelInfo>();
+const activeFunnels = new Map<number, FunnelInfo & { pid?: number }>();
 
 // ============================================================================
 // Tailscale CLI Helpers
@@ -113,11 +113,12 @@ async function startFunnel(port: number, path: string = "/"): Promise<string | n
     // Funnel always uses HTTPS on port 443
     const publicUrl = `https://${hostname}${path === "/" ? "" : path}`;
 
-    const info: FunnelInfo = {
+    const info: FunnelInfo & { pid?: number } = {
       port,
       path,
       publicUrl,
       active: true,
+      pid: funnelProcess.pid,
     };
     activeFunnels.set(port, info);
 
@@ -134,8 +135,19 @@ async function stopFunnel(port: number): Promise<boolean> {
   if (!info) return false;
 
   try {
-    // Stop the funnel
-    exec(`tailscale funnel --remove ${port}`);
+    // Stop the funnel using 'tailscale funnel off' or by killing the process
+    // The correct syntax is: tailscale funnel <port> off
+    exec(`tailscale funnel ${port} off`);
+
+    // Also try to kill the process if we have the PID
+    if (info.pid) {
+      try {
+        process.kill(info.pid, "SIGTERM");
+      } catch {
+        // Process may already be dead
+      }
+    }
+
     info.active = false;
     activeFunnels.delete(port);
     ctx?.log.info(`Funnel stopped for port ${port}`);
