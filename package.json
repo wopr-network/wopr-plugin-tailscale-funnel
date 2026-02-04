@@ -1,0 +1,24 @@
+{
+  "name": "wopr-plugin-tailscale-funnel",
+  "version": "1.0.0",
+  "description": "Expose WOPR services externally via Tailscale Funnel",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "wopr",
+    "plugin",
+    "tailscale",
+    "funnel",
+    "tunnel"
+  ],
+  "author": "WOPR",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "typescript": "^5.3.3"
+  }
+}
