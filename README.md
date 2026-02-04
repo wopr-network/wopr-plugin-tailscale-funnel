@@ -89,6 +89,40 @@ const status = funnel.getStatus();
 - **Single port only:** Tailscale Funnel supports one exposed port at a time per machine
 - Exposing a new port will automatically stop any existing funnel
 
+## Operational Notes
+
+### Tailscale Must Be Running First
+
+Tailscale daemon (`tailscaled`) must be running before WOPR starts. In containerized environments:
+
+```bash
+# Ensure tailscale is up
+tailscale up --authkey=<your-key>
+
+# Clear any conflicting listeners before starting funnel
+tailscale serve reset
+
+# Then start WOPR
+wopr daemon
+```
+
+### Container Setup
+
+For Docker containers, run in privileged mode and ensure Tailscale auto-starts:
+
+```dockerfile
+# In your entrypoint
+tailscaled --state=/var/lib/tailscale/tailscaled.state &
+sleep 2
+tailscale up --authkey=${TAILSCALE_AUTHKEY}
+```
+
+### Troubleshooting
+
+- **"listener already exists"**: Run `tailscale serve reset` to clear existing funnels
+- **Funnel not accessible**: Verify funnel is enabled on your tailnet in the admin console
+- **Port not exposed**: Check `tailscale funnel status` for current state
+
 ## License
 
 MIT
