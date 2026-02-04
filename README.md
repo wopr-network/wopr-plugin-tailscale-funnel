@@ -1,0 +1,1 @@
+# wopr-plugin-tailscale-funnel
