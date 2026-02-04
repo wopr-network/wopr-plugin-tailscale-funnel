@@ -5,7 +5,7 @@
  * Other plugins can use the funnel extension to get public URLs.
  */
 
-import { spawn, execSync } from "node:child_process";
+import { spawn, execSync, spawnSync } from "node:child_process";
 import type {
   WOPRPlugin,
   WOPRPluginContext,
@@ -42,8 +42,10 @@ function exec(cmd: string): string | null {
 async function checkTailscaleAvailable(): Promise<boolean> {
   if (available !== null) return available;
 
-  // Check if tailscale CLI exists
-  const which = exec("which tailscale");
+  // Check if tailscale CLI exists (cross-platform: 'where' on Windows, 'which' elsewhere)
+  const isWindows = process.platform === "win32";
+  const whichCmd = isWindows ? "where tailscale" : "which tailscale";
+  const which = exec(whichCmd);
   if (!which) {
     ctx?.log.warn("Tailscale CLI not found. Install from https://tailscale.com/download");
     available = false;
@@ -153,11 +155,13 @@ async function stopFunnel(port: number): Promise<boolean> {
     return false;
   }
 
-  // Stop the funnel using 'tailscale funnel off'
-  // Note: exec() returns null on failure, doesn't throw
-  const result = exec(`tailscale funnel ${port} off`);
-  if (result === null) {
-    ctx?.log.warn(`tailscale funnel ${port} off may have failed`);
+  // Stop the funnel using spawnSync with args array (safer than shell string)
+  const result = spawnSync("tailscale", ["funnel", String(port), "off"], {
+    encoding: "utf-8",
+    timeout: 10000,
+  });
+  if (result.status !== 0) {
+    ctx?.log.warn(`tailscale funnel ${port} off may have failed: ${result.stderr || ""}`);
   }
 
   // Also try to kill the process if we have the PID
@@ -313,15 +317,16 @@ const plugin: WOPRPlugin = {
       return;
     }
 
-    // Register extension first so other plugins can use it
-    ctx.registerExtension("funnel", funnelExtension);
-
-    // Check availability
+    // Check availability first
     const isAvailable = await checkTailscaleAvailable();
     if (!isAvailable) {
       ctx.log.warn("Tailscale Funnel not available - install Tailscale and run 'tailscale up'");
+      // Don't register extension if Tailscale isn't available
       return;
     }
+
+    // Register extension only after confirming Tailscale is available
+    ctx.registerExtension("funnel", funnelExtension);
 
     // Auto-expose configured port (only one supported by Tailscale)
     if (config?.expose) {
