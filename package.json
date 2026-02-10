@@ -1,12 +1,10 @@
 {
-  "name": "wopr-plugin-tailscale-funnel",
-  "version": "1.0.0",
+  "author": "WOPR",
   "description": "Expose WOPR services externally via Tailscale Funnel",
-  "type": "module",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.14",
+    "@types/node": "^25.2.0",
+    "typescript": "^5.3.3"
   },
   "keywords": [
     "wopr",
@@ -15,10 +13,17 @@
     "funnel",
     "tunnel"
   ],
-  "author": "WOPR",
   "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^25.2.0",
-    "typescript": "^5.3.3"
-  }
+  "main": "dist/index.js",
+  "name": "wopr-plugin-tailscale-funnel",
+  "scripts": {
+    "build": "tsc",
+    "check": "biome check src/ && tsc --noEmit",
+    "dev": "tsc --watch",
+    "format": "biome format --write src/",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --fix src/"
+  },
+  "type": "module",
+  "version": "1.0.0"
 }
