@@ -7,6 +7,7 @@
 
 import { execSync, spawn, spawnSync } from "node:child_process";
 import type {
+	ConfigSchema,
 	FunnelConfig,
 	FunnelExtension,
 	FunnelInfo,
@@ -299,40 +300,40 @@ const funnelExtension: FunnelExtension = {
 // Plugin
 // ============================================================================
 
+const configSchema: ConfigSchema = {
+	title: "Tailscale Funnel",
+	description:
+		"Expose a local service to the internet via Tailscale Funnel (one port at a time)",
+	fields: [
+		{
+			name: "enabled",
+			type: "boolean",
+			label: "Enable Funnel",
+			description: "Enable Tailscale Funnel integration",
+			default: true,
+		},
+		{
+			name: "expose",
+			type: "object",
+			label: "Auto-expose port",
+			description:
+				"Port to automatically expose on startup (only one supported)",
+		},
+		{
+			name: "pollIntervalSeconds",
+			type: "number",
+			label: "Hostname poll interval",
+			description:
+				"How often (in seconds) to check for hostname changes. 0 to disable.",
+			default: 60,
+		},
+	],
+};
+
 const plugin: WOPRPlugin = {
 	name: "wopr-plugin-tailscale-funnel",
 	version: "1.0.0",
 	description: "Expose WOPR services externally via Tailscale Funnel",
-
-	configSchema: {
-		title: "Tailscale Funnel",
-		description:
-			"Expose a local service to the internet via Tailscale Funnel (one port at a time)",
-		fields: [
-			{
-				name: "enabled",
-				type: "boolean",
-				label: "Enable Funnel",
-				description: "Enable Tailscale Funnel integration",
-				default: true,
-			},
-			{
-				name: "expose",
-				type: "object",
-				label: "Auto-expose port",
-				description:
-					"Port to automatically expose on startup (only one supported)",
-			},
-			{
-				name: "pollIntervalSeconds",
-				type: "number",
-				label: "Hostname poll interval",
-				description:
-					"How often (in seconds) to check for hostname changes. 0 to disable.",
-				default: 60,
-			},
-		],
-	},
 
 	commands: [
 		{
@@ -403,6 +404,7 @@ const plugin: WOPRPlugin = {
 
 	async init(pluginCtx) {
 		ctx = pluginCtx;
+		ctx.registerConfigSchema("wopr-plugin-tailscale-funnel", configSchema);
 		const config = ctx.getConfig<FunnelConfig>();
 
 		if (config?.enabled === false) {
@@ -464,6 +466,7 @@ const plugin: WOPRPlugin = {
 			await stopFunnel(activeFunnel.port);
 		}
 
+		ctx?.unregisterConfigSchema("wopr-plugin-tailscale-funnel");
 		ctx?.unregisterExtension("funnel");
 		ctx = null;
 		hostname = null;

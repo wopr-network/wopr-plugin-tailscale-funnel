@@ -1,6 +1,15 @@
 /**
  * Tailscale Funnel Plugin Types
+ *
+ * Shared WOPR types are imported from @wopr-network/plugin-types.
+ * Only plugin-specific types are defined here.
  */
+
+export type {
+	ConfigSchema,
+	WOPRPlugin,
+	WOPRPluginContext,
+} from "@wopr-network/plugin-types";
 
 export interface FunnelConfig {
 	enabled?: boolean;
@@ -70,46 +79,4 @@ export interface FunnelExtension {
 
 	/** Get the active funnel port, or null if no funnel is active */
 	getPort(): number | null;
-}
-
-export interface WOPRPluginContext {
-	log: {
-		info(msg: string): void;
-		warn(msg: string): void;
-		error(msg: string): void;
-		debug?(msg: string): void;
-	};
-	events?: {
-		emitCustom(event: string, payload: unknown): Promise<void>;
-	};
-	getConfig<T>(): T | undefined;
-	registerExtension(name: string, extension: unknown): void;
-	unregisterExtension(name: string): void;
-	getExtension(name: string): unknown;
-}
-
-export interface WOPRPlugin {
-	name: string;
-	version: string;
-	description?: string;
-	configSchema?: {
-		title: string;
-		description: string;
-		fields: Array<{
-			name: string;
-			type: string;
-			label?: string;
-			description?: string;
-			required?: boolean;
-			default?: unknown;
-		}>;
-	};
-	commands?: Array<{
-		name: string;
-		description: string;
-		usage?: string;
-		handler: (ctx: WOPRPluginContext, args: string[]) => Promise<void>;
-	}>;
-	init?(ctx: WOPRPluginContext): Promise<void>;
-	shutdown?(): Promise<void>;
 }
