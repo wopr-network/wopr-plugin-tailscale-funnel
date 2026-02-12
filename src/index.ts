@@ -113,7 +113,13 @@ async function pollHostname(): Promise<void> {
 		const newHostname = parsed.Self?.DNSName?.replace(/\.$/, "") || null;
 		if (!newHostname || newHostname === hostname) return;
 
-		const oldHostname = hostname as string;
+		// First poll after startup: hostname is null, just initialize it
+		if (!hostname) {
+			hostname = newHostname;
+			return;
+		}
+
+		const oldHostname = hostname;
 		hostname = newHostname;
 		ctx?.log.info(
 			`Tailscale hostname changed: ${oldHostname} -> ${newHostname}`,
@@ -133,7 +139,7 @@ async function pollHostname(): Promise<void> {
 			activePort: activeFunnel?.active ? activeFunnel.port : null,
 			publicUrl: activeFunnel?.active ? activeFunnel.publicUrl : null,
 		};
-		await ctx?.events.emitCustom("funnel:hostname-changed", payload);
+		await ctx?.events?.emitCustom("funnel:hostname-changed", payload);
 
 		// Notify registered callbacks
 		for (const cb of hostnameChangeCallbacks) {

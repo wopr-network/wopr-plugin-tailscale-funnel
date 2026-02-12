@@ -79,7 +79,7 @@ export interface WOPRPluginContext {
 		error(msg: string): void;
 		debug?(msg: string): void;
 	};
-	events: {
+	events?: {
 		emitCustom(event: string, payload: unknown): Promise<void>;
 	};
 	getConfig<T>(): T | undefined;
