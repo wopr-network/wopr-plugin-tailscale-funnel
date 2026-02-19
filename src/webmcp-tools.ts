@@ -72,6 +72,15 @@ export function buildNodeStatusResponse(
 
 	try {
 		const parsed = JSON.parse(tailscaleStatusJson);
+		if (!parsed || typeof parsed !== "object") {
+			return {
+				online: false,
+				available,
+				hostname,
+				ip: null,
+				tailnetName: null,
+			};
+		}
 		const self = parsed.Self || {};
 
 		return {

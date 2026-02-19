@@ -141,9 +141,13 @@ async function pollHostname(): Promise<void> {
 
 		// Update active funnel publicUrl
 		if (activeFunnel?.active) {
-			const oldUrl = activeFunnel.publicUrl;
-			activeFunnel.publicUrl = oldUrl.replace(oldHostname, newHostname);
-			ctx?.log.info(`Updated funnel URL: ${activeFunnel.publicUrl}`);
+			if (!activeFunnel.publicUrl) {
+				ctx?.log.warn("Active funnel missing publicUrl during hostname change");
+			} else {
+				const oldUrl = activeFunnel.publicUrl;
+				activeFunnel.publicUrl = oldUrl.replace(oldHostname, newHostname);
+				ctx?.log.info(`Updated funnel URL: ${activeFunnel.publicUrl}`);
+			}
 		}
 
 		// Emit event via event bus
@@ -451,66 +455,94 @@ const plugin: WOPRPlugin = {
 						description:
 							"Get Tailscale Funnel status: enabled/disabled, public URL, tailnet hostname.",
 						inputSchema: { type: "object" as const, properties: {} },
-						handler: async () => ({
-							content: [
-								{
-									type: "text" as const,
-									text: JSON.stringify(
-										buildFunnelStatusResponse(funnelExtension.getStatus()),
-									),
-								},
-							],
-						}),
+						handler: async () => {
+							try {
+								return {
+									content: [
+										{
+											type: "text" as const,
+											text: JSON.stringify(
+												buildFunnelStatusResponse(funnelExtension.getStatus()),
+											),
+										},
+									],
+								};
+							} catch (err) {
+								ctx?.log.error(`funnel_status tool error: ${err}`);
+								throw err;
+							}
+						},
 					},
 					{
 						name: "funnel_routes",
 						description:
 							"Get active Tailscale Funnel routes and their target ports.",
 						inputSchema: { type: "object" as const, properties: {} },
-						handler: async () => ({
-							content: [
-								{
-									type: "text" as const,
-									text: JSON.stringify(
-										buildFunnelRoutesResponse(funnelExtension.getStatus()),
-									),
-								},
-							],
-						}),
+						handler: async () => {
+							try {
+								return {
+									content: [
+										{
+											type: "text" as const,
+											text: JSON.stringify(
+												buildFunnelRoutesResponse(funnelExtension.getStatus()),
+											),
+										},
+									],
+								};
+							} catch (err) {
+								ctx?.log.error(`funnel_routes tool error: ${err}`);
+								throw err;
+							}
+						},
 					},
 					{
 						name: "tailscale_node_status",
 						description:
 							"Get Tailscale node status: online/offline, IP address, tailnet name.",
 						inputSchema: { type: "object" as const, properties: {} },
-						handler: async () => ({
-							content: [
-								{
-									type: "text" as const,
-									text: JSON.stringify(
-										buildNodeStatusResponse(
-											getTailscaleStatusJson(),
-											available ?? false,
-											hostname,
-										),
-									),
-								},
-							],
-						}),
+						handler: async () => {
+							try {
+								return {
+									content: [
+										{
+											type: "text" as const,
+											text: JSON.stringify(
+												buildNodeStatusResponse(
+													getTailscaleStatusJson(),
+													available ?? false,
+													hostname,
+												),
+											),
+										},
+									],
+								};
+							} catch (err) {
+								ctx?.log.error(`tailscale_node_status tool error: ${err}`);
+								throw err;
+							}
+						},
 					},
 					{
 						name: "funnel_stats",
 						description:
 							"Get Tailscale Funnel plugin statistics: funnels started/stopped, uptime.",
 						inputSchema: { type: "object" as const, properties: {} },
-						handler: async () => ({
-							content: [
-								{
-									type: "text" as const,
-									text: JSON.stringify(buildStatsResponse(getStats())),
-								},
-							],
-						}),
+						handler: async () => {
+							try {
+								return {
+									content: [
+										{
+											type: "text" as const,
+											text: JSON.stringify(buildStatsResponse(getStats())),
+										},
+									],
+								};
+							} catch (err) {
+								ctx?.log.error(`funnel_stats tool error: ${err}`);
+								throw err;
+							}
+						},
 					},
 				],
 			});
