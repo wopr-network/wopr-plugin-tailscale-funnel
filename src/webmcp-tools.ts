@@ -7,9 +7,7 @@ import type { FunnelInfo, FunnelStatus } from "./types.js";
  * getFunnelStatus — Funnel enabled/disabled, public URL, tailnet hostname.
  * Security: No auth keys. Only public-facing information.
  */
-export function buildFunnelStatusResponse(
-	status: FunnelStatus,
-): Record<string, unknown> {
+export function buildFunnelStatusResponse(status: FunnelStatus): Record<string, unknown> {
 	const activeFunnel = status.funnels.length > 0 ? status.funnels[0] : null;
 
 	return {
@@ -32,9 +30,7 @@ export function buildFunnelStatusResponse(
  * getFunnelRoutes — Active funnel routes and their target ports.
  * Tailscale Funnel only supports ONE active funnel at a time.
  */
-export function buildFunnelRoutesResponse(
-	status: FunnelStatus,
-): Record<string, unknown> {
+export function buildFunnelRoutesResponse(status: FunnelStatus): Record<string, unknown> {
 	return {
 		count: status.funnels.length,
 		routes: status.funnels.map((f: FunnelInfo) => ({
@@ -108,9 +104,7 @@ function formatUptime(ms: number): string {
 /**
  * Build stats response for the funnel_stats tool.
  */
-export function buildStatsResponse(
-	stats: FunnelStats,
-): Record<string, unknown> {
+export function buildStatsResponse(stats: FunnelStats): Record<string, unknown> {
 	const uptimeMs = Date.now() - stats.startedAt;
 	return {
 		funnels: {

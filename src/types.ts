@@ -47,10 +47,7 @@ export interface FunnelInfo {
 }
 
 /** Callback for hostname change notifications */
-export type HostnameChangeCallback = (
-	oldHostname: string,
-	newHostname: string,
-) => void;
+export type HostnameChangeCallback = (oldHostname: string, newHostname: string) => void;
 
 /**
  * Extension interface exposed to other plugins

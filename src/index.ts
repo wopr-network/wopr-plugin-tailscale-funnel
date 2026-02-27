@@ -6,6 +6,7 @@
  */
 
 import { execSync, spawn, spawnSync } from "node:child_process";
+import type { PluginManifest } from "@wopr-network/plugin-types";
 import { getStats, incrementStat, resetStats } from "./stats.js";
 import type {
 	ConfigSchema,
@@ -65,9 +66,7 @@ async function checkTailscaleAvailable(): Promise<boolean> {
 	const whichCmd = isWindows ? "where tailscale" : "which tailscale";
 	const which = exec(whichCmd);
 	if (!which) {
-		ctx?.log.warn(
-			"Tailscale CLI not found. Install from https://tailscale.com/download",
-		);
+		ctx?.log.warn("Tailscale CLI not found. Install from https://tailscale.com/download");
 		available = false;
 		return false;
 	}
@@ -135,9 +134,7 @@ async function pollHostname(): Promise<void> {
 		const oldHostname = hostname;
 		hostname = newHostname;
 		incrementStat("hostnameChanges");
-		ctx?.log.info(
-			`Tailscale hostname changed: ${oldHostname} -> ${newHostname}`,
-		);
+		ctx?.log.info(`Tailscale hostname changed: ${oldHostname} -> ${newHostname}`);
 
 		// Update active funnel publicUrl
 		if (activeFunnel?.active) {
@@ -168,10 +165,7 @@ async function pollHostname(): Promise<void> {
 	}
 }
 
-async function startFunnel(
-	port: number,
-	path: string = "/",
-): Promise<string | null> {
+async function startFunnel(port: number, path: string = "/"): Promise<string | null> {
 	if (!(await checkTailscaleAvailable())) {
 		return null;
 	}
@@ -183,17 +177,13 @@ async function startFunnel(
 
 	// Check if already exposed on this port
 	if (activeFunnel?.active && activeFunnel.port === port) {
-		ctx?.log.debug?.(
-			`Port ${port} already exposed at ${activeFunnel.publicUrl}`,
-		);
+		ctx?.log.debug?.(`Port ${port} already exposed at ${activeFunnel.publicUrl}`);
 		return activeFunnel.publicUrl;
 	}
 
 	// Tailscale only supports ONE funnel at a time - stop any existing funnel
 	if (activeFunnel?.active) {
-		ctx?.log.info(
-			`Replacing existing funnel on port ${activeFunnel.port} with port ${port}`,
-		);
+		ctx?.log.info(`Replacing existing funnel on port ${activeFunnel.port} with port ${port}`);
 		await stopFunnel(activeFunnel.port);
 	}
 
@@ -249,9 +239,7 @@ async function stopFunnel(port: number): Promise<boolean> {
 		timeout: 10000,
 	});
 	if (result.status !== 0) {
-		ctx?.log.warn(
-			`tailscale funnel ${port} off may have failed: ${result.stderr || ""}`,
-		);
+		ctx?.log.warn(`tailscale funnel ${port} off may have failed: ${result.stderr || ""}`);
 	}
 
 	// Also try to kill the process if we have the PID
@@ -315,10 +303,28 @@ const funnelExtension: FunnelExtension = {
 // Plugin
 // ============================================================================
 
+const manifest: PluginManifest = {
+	name: "@wopr-network/wopr-plugin-tailscale-funnel",
+	version: "1.0.0",
+	description: "Expose WOPR services externally via Tailscale Funnel",
+	author: "wopr-network",
+	license: "MIT",
+	repository: "https://github.com/wopr-network/wopr-plugin-tailscale-funnel",
+	homepage: "https://github.com/wopr-network/wopr-plugin-tailscale-funnel#readme",
+	capabilities: ["utility"],
+	requires: {
+		bins: ["tailscale"],
+		network: {
+			outbound: true,
+			inbound: true,
+			p2p: false,
+		},
+	},
+};
+
 const configSchema: ConfigSchema = {
 	title: "Tailscale Funnel",
-	description:
-		"Expose a local service to the internet via Tailscale Funnel (one port at a time)",
+	description: "Expose a local service to the internet via Tailscale Funnel (one port at a time)",
 	fields: [
 		{
 			name: "enabled",
@@ -331,24 +337,23 @@ const configSchema: ConfigSchema = {
 			name: "expose",
 			type: "object",
 			label: "Auto-expose port",
-			description:
-				"Port to automatically expose on startup (only one supported)",
+			description: "Port to automatically expose on startup (only one supported)",
 		},
 		{
 			name: "pollIntervalSeconds",
 			type: "number",
 			label: "Hostname poll interval",
-			description:
-				"How often (in seconds) to check for hostname changes. 0 to disable.",
+			description: "How often (in seconds) to check for hostname changes. 0 to disable.",
 			default: 60,
 		},
 	],
 };
 
 const plugin: WOPRPlugin = {
-	name: "wopr-plugin-tailscale-funnel",
+	name: "@wopr-network/wopr-plugin-tailscale-funnel",
 	version: "1.0.0",
 	description: "Expose WOPR services externally via Tailscale Funnel",
+	manifest,
 
 	commands: [
 		{
@@ -430,9 +435,7 @@ const plugin: WOPRPlugin = {
 		// Check availability first
 		const isAvailable = await checkTailscaleAvailable();
 		if (!isAvailable) {
-			ctx.log.warn(
-				"Tailscale Funnel not available - install Tailscale and run 'tailscale up'",
-			);
+			ctx.log.warn("Tailscale Funnel not available - install Tailscale and run 'tailscale up'");
 			// Don't register extension if Tailscale isn't available
 			return;
 		}
@@ -455,44 +458,34 @@ const plugin: WOPRPlugin = {
 							content: [
 								{
 									type: "text" as const,
-									text: JSON.stringify(
-										buildFunnelStatusResponse(funnelExtension.getStatus()),
-									),
+									text: JSON.stringify(buildFunnelStatusResponse(funnelExtension.getStatus())),
 								},
 							],
 						}),
 					},
 					{
 						name: "funnel_routes",
-						description:
-							"Get active Tailscale Funnel routes and their target ports.",
+						description: "Get active Tailscale Funnel routes and their target ports.",
 						inputSchema: { type: "object" as const, properties: {} },
 						handler: async () => ({
 							content: [
 								{
 									type: "text" as const,
-									text: JSON.stringify(
-										buildFunnelRoutesResponse(funnelExtension.getStatus()),
-									),
+									text: JSON.stringify(buildFunnelRoutesResponse(funnelExtension.getStatus())),
 								},
 							],
 						}),
 					},
 					{
 						name: "tailscale_node_status",
-						description:
-							"Get Tailscale node status: online/offline, IP address, tailnet name.",
+						description: "Get Tailscale node status: online/offline, IP address, tailnet name.",
 						inputSchema: { type: "object" as const, properties: {} },
 						handler: async () => ({
 							content: [
 								{
 									type: "text" as const,
 									text: JSON.stringify(
-										buildNodeStatusResponse(
-											getTailscaleStatusJson(),
-											available ?? false,
-											hostname,
-										),
+										buildNodeStatusResponse(getTailscaleStatusJson(), available ?? false, hostname),
 									),
 								},
 							],
@@ -500,8 +493,7 @@ const plugin: WOPRPlugin = {
 					},
 					{
 						name: "funnel_stats",
-						description:
-							"Get Tailscale Funnel plugin statistics: funnels started/stopped, uptime.",
+						description: "Get Tailscale Funnel plugin statistics: funnels started/stopped, uptime.",
 						inputSchema: { type: "object" as const, properties: {} },
 						handler: async () => ({
 							content: [
@@ -519,9 +511,7 @@ const plugin: WOPRPlugin = {
 		// Auto-expose configured port (only one supported by Tailscale)
 		if (config?.expose) {
 			// Support both old array format (use first item) and new object format
-			const exposeConfig = Array.isArray(config.expose)
-				? config.expose[0]
-				: config.expose;
+			const exposeConfig = Array.isArray(config.expose) ? config.expose[0] : config.expose;
 			if (exposeConfig?.port) {
 				const url = await startFunnel(exposeConfig.port, exposeConfig.path);
 				if (url) {
@@ -567,9 +557,4 @@ const plugin: WOPRPlugin = {
 };
 
 export default plugin;
-export type {
-	FunnelExtension,
-	FunnelStatus,
-	FunnelInfo,
-	HostnameChangeCallback,
-};
+export type { FunnelExtension, FunnelStatus, FunnelInfo, HostnameChangeCallback };
