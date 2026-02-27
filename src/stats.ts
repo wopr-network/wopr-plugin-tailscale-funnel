@@ -20,10 +20,7 @@ export function getStats(): Readonly<FunnelStats> {
 	return { ...stats };
 }
 
-export function incrementStat(
-	key: keyof Omit<FunnelStats, "startedAt">,
-	amount = 1,
-): void {
+export function incrementStat(key: keyof Omit<FunnelStats, "startedAt">, amount = 1): void {
 	stats[key] += amount;
 }
 
