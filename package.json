@@ -2,8 +2,8 @@
   "author": "WOPR",
   "description": "Expose WOPR services externally via Tailscale Funnel",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.3",
-    "@types/node": "^25.3.0",
+    "@biomejs/biome": "^2.4.4",
+    "@types/node": "^25.3.2",
     "typescript": "^5.3.3",
     "vitest": "^4.0.18"
   },
@@ -32,7 +32,7 @@
   "type": "module",
   "version": "1.0.0",
   "dependencies": {
-    "@wopr-network/plugin-types": "^0.2.1"
+    "@wopr-network/plugin-types": "^0.7.1"
   },
   "publishConfig": {
     "access": "public"
