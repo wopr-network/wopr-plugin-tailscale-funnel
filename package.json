@@ -16,16 +16,18 @@
   ],
   "license": "MIT",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "name": "@wopr-network/wopr-plugin-tailscale-funnel",
   "scripts": {
     "build": "tsc",
-    "check": "biome check src/ && tsc --noEmit",
+    "check": "biome check --config-path=. src/ && tsc --noEmit",
     "dev": "tsc --watch",
-    "format": "biome format --write src/",
-    "lint": "biome check src/",
-    "lint:fix": "biome check --fix src/",
+    "format": "biome format --config-path=. --write src/",
+    "lint": "biome check --config-path=. src/",
+    "lint:fix": "biome check --config-path=. --fix src/",
     "prepublishOnly": "npm run build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "type": "module",
   "version": "1.0.0",
