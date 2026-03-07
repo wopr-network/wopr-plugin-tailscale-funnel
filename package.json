@@ -2,7 +2,7 @@
   "author": "WOPR",
   "description": "Expose WOPR services externally via Tailscale Funnel",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
+    "@biomejs/biome": "^2.4.6",
     "@types/node": "^25.3.2",
     "typescript": "^5.3.3",
     "vitest": "^4.0.18"
