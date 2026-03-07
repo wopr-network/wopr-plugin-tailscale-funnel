@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { getStats, incrementStat, resetStats } from "../src/stats.js";
 
 describe("stats", () => {
