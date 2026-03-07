@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { FunnelStats } from "../src/stats.js";
+import type { FunnelStatus } from "../src/types.js";
 import {
-	buildFunnelStatusResponse,
 	buildFunnelRoutesResponse,
+	buildFunnelStatusResponse,
 	buildNodeStatusResponse,
 	buildStatsResponse,
 } from "../src/webmcp-tools.js";
-import type { FunnelStatus } from "../src/types.js";
-import type { FunnelStats } from "../src/stats.js";
 
 describe("buildFunnelStatusResponse", () => {
 	it("returns correct data with available=true and active funnel", () => {
@@ -208,7 +208,12 @@ describe("buildStatsResponse", () => {
 		};
 
 		const result = buildStatsResponse(stats);
-		const uptime = result.uptime as { ms: number; seconds: number; human: string; startedAt: string };
+		const uptime = result.uptime as {
+			ms: number;
+			seconds: number;
+			human: string;
+			startedAt: string;
+		};
 
 		expect(uptime.ms).toBeGreaterThanOrEqual(59000);
 		expect(uptime.seconds).toBeGreaterThanOrEqual(59);
