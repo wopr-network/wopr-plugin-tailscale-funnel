@@ -1,3 +1,11 @@
+# ⚠️ This package has moved
+
+This package is now maintained in the [wopr-plugins monorepo](https://github.com/wopr-network/wopr-plugins/tree/main/packages/plugin-tailscale-funnel).
+
+This repository is archived and no longer accepts contributions.
+
+---
+
 # wopr-plugin-tailscale-funnel
 
 Expose WOPR services to the internet via [Tailscale Funnel](https://tailscale.com/kb/1223/funnel).
